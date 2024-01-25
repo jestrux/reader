@@ -4,13 +4,14 @@ import {
 	deleteDoc,
 	doc,
 	getDocs,
+	onSnapshot,
 	orderBy,
 	query,
 	setDoc,
 	where,
 } from "firebase/firestore";
 import { db } from "./firebaseApp";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import DragDropList from "./DragDropList";
 import { useEffect, useState } from "react";
 import Loader from "./Loader";
@@ -148,18 +149,17 @@ async function processUrl(url) {
 
 function App() {
 	const randomId = () => Math.random().toString(36).substring(7);
+	const [entries, setEntries] = useState(null);
 	const [cacheKey, setCacheKey] = useState(randomId());
 	const [groupFilter, setGroupFilter] = useState("");
 	const groups = ["🌎 General", "📺 Watch", "🧪 Learn", "🎧 Listen"];
-
 	const {
-		isPending: loading,
 		error,
-		data: value,
-		refetch,
-	} = useQuery({
-		queryKey: ["collections", cacheKey, setCacheKey],
-		queryFn: () => {
+		isPending: loading,
+		mutateAsync,
+	} = useMutation({
+		mutationKey: ["collections", cacheKey, setCacheKey],
+		mutationFn: () => {
 			var params = [
 				collection(db, "reader"),
 				...(groupFilter
@@ -172,13 +172,45 @@ function App() {
 		},
 	});
 
+	// const {
+	// 	isPending: loading,
+	// 	error,
+	// 	data: value,
+	// 	refetch,
+	// } = useQuery({
+	// 	queryKey: ["collections", cacheKey, setCacheKey],
+	// 	queryFn: () => {
+	// 		var params = [
+	// 			collection(db, "reader"),
+	// 			...(groupFilter
+	// 				? [where("group", "==", groupFilter), orderBy("group")]
+	// 				: []),
+	// 			orderBy("index", "desc"),
+	// 		];
+
+	// 		return getDocs(query(...params));
+	// 	},
+	// });
+
 	useEffect(() => {
+		if (!entries) refreshData();
+
 		document.addEventListener("focus", refreshData, false);
-		return () => document.removeEventListener("focus", refreshData);
+
+		const cancelSnapshotListener = onSnapshot(
+			collection(db, "reader"),
+			() => refreshData()
+		);
+
+		return () => {
+			document.removeEventListener("focus", refreshData);
+			cancelSnapshotListener();
+		};
 	}, []);
 
 	const refreshData = async () => {
-		await refetch();
+		var res = await mutateAsync();
+		setEntries(res.docs);
 		setCacheKey(randomId());
 	};
 
@@ -191,12 +223,10 @@ function App() {
 			console.log("New entry: ", entry);
 			await addDoc(collection(db, "reader"), {
 				...(entry ?? {}),
-				index: value?.docs.length ?? 1,
+				index: entries.length ?? 1,
 				group: "🌎 General",
 				createdAt: new Date(),
 			});
-
-			refreshData();
 		} catch (error) {
 			alert(error);
 		}
@@ -204,7 +234,7 @@ function App() {
 
 	function setState(data) {
 		data.forEach((entry, idx) => {
-			const newIndex = value.docs.length - idx;
+			const newIndex = entries.length - idx;
 			const { index } = entry.data() || {};
 			if (index != newIndex) {
 				console.log("Data: ", entry.id, index, newIndex);
@@ -227,8 +257,6 @@ function App() {
 		if (!(await confirm("Are you sure?"))) return;
 
 		await deleteDoc(doc(db, "reader", docId));
-
-		refreshData();
 	}
 
 	const onElectron = document.body.classList.contains("on-electron");
@@ -331,7 +359,7 @@ function App() {
 						{error && (
 							<strong>Error: {JSON.stringify(error)}</strong>
 						)}
-						{!value && loading && (
+						{!entries && loading && (
 							<div className="py-4 flex justify-center text-content/20">
 								<Loader
 									color="currentColor"
@@ -342,11 +370,11 @@ function App() {
 						)}
 					</div>
 
-					{value && (
+					{entries && (
 						<DragDropList
 							key={cacheKey}
 							className="flex flex-col gap-2"
-							items={value.docs}
+							items={entries}
 							onChange={setState}
 						>
 							{({ item: doc }) => {
