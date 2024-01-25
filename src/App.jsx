@@ -1,6 +1,7 @@
 import {
 	addDoc,
 	collection,
+	deleteDoc,
 	doc,
 	getDocs,
 	orderBy,
@@ -117,23 +118,29 @@ async function processUrl(url) {
 
 	return {
 		url,
-		image: [
-			...new Set(
-				[twitterImage, ogImage, appleTouchIcon, shortCutIcon].filter(
-					(v) => v
-				)
-			),
-		]?.[0],
-		title: [
-			...new Set([twitterTitle, ogTitle, title].filter((v) => v)),
-		]?.[0],
-		description: [
-			...new Set(
-				[twitterDescription, ogDescription, description].filter(
-					(v) => v
-				)
-			),
-		]?.[0],
+		image:
+			[
+				...new Set(
+					[
+						twitterImage,
+						ogImage,
+						appleTouchIcon,
+						shortCutIcon,
+					].filter((v) => v)
+				),
+			]?.[0] ?? null,
+		title:
+			[
+				...new Set([twitterTitle, ogTitle, title].filter((v) => v)),
+			]?.[0] ?? null,
+		description:
+			[
+				...new Set(
+					[twitterDescription, ogDescription, description].filter(
+						(v) => v
+					)
+				),
+			]?.[0] ?? null,
 	};
 }
 
@@ -149,7 +156,7 @@ function App() {
 	} = useQuery({
 		queryKey: ["collections", cacheKey, setCacheKey],
 		queryFn: () =>
-			getDocs(query(collection(db, "reader"), orderBy("index", "asc"))),
+			getDocs(query(collection(db, "reader"), orderBy("index", "desc"))),
 	});
 
 	useEffect(() => {
@@ -168,7 +175,7 @@ function App() {
 			if (!isValidHttpUrl(url)) throw "Invalid url";
 
 			var entry = await processUrl(url);
-			// console.log("New entry: ", entry);
+			console.log("New entry: ", entry);
 			await addDoc(collection(db, "reader"), {
 				...(entry ?? {}),
 				index: value?.docs.length ?? 1,
@@ -184,7 +191,8 @@ function App() {
 	}
 
 	function setState(data) {
-		data.forEach((entry, newIndex) => {
+		data.forEach((entry, idx) => {
+			const newIndex = value.docs.length - idx;
 			const { index } = entry.data() || {};
 			if (index != newIndex) {
 				console.log("Data: ", entry.id, index, newIndex);
@@ -201,6 +209,18 @@ function App() {
 		setDoc(doc(db, "reader", docId), { group }, { merge: true });
 	}
 
+	async function removeEntry(e, docId) {
+		e.stopPropagation();
+
+		if (!(await confirm("Are you sure?"))) return;
+
+		await deleteDoc(doc(db, "reader", docId));
+
+		refreshData();
+	}
+
+	const onElectron = document.body.classList.contains("on-electron");
+
 	return (
 		<div
 			className="min-h-screen bg-canvas text-content"
@@ -211,8 +231,11 @@ function App() {
 			}
 		>
 			<button
-				className="fixed inset-x-0 mx-auto bottom-12 shadow-md bg-card border border-stroke h-12 w-32 flex items-center justify-center gap-2 rounded-full px-3.5 focus:outline-none"
+				className="fixed inset-x-0 mx-auto z-10 shadow-md bg-white dark:bg-[#3c3c3c] border border-transparent dark:border-content/20 h-12 w-32 flex items-center justify-center gap-2 rounded-full px-3.5 focus:outline-none"
 				onClick={handleAdd}
+				style={{
+					bottom: onElectron ? "1.2rem" : "3rem",
+				}}
 			>
 				<svg className="h-4 mb-px" viewBox="0 0 24 24">
 					<defs>
@@ -269,7 +292,7 @@ function App() {
 				{value && (
 					<DragDropList
 						key={cacheKey}
-						className="flex flex-col gap-2 divide-y divide-stroke"
+						className="flex flex-col gap-2"
 						items={value.docs}
 						onChange={setState}
 					>
@@ -277,9 +300,21 @@ function App() {
 							var data = doc.data();
 
 							return (
-								<button
+								<div
 									key={doc.id}
-									className="w-full text-left bg-card rounded-md p-2 lg:p-4 border border-stroke shadow-sm flex items-center gap-3 lg:gap-6 focus:outline-none"
+									className="group relative w-full text-left bg-card rounded-md p-2 lg:p-4 border border-stroke shadow-sm flex items-center gap-3 lg:gap-6 focus:outline-none"
+									onClick={() => {
+										onElectron
+											? window.dispatchEvent(
+													new CustomEvent(
+														"open-url",
+														{
+															detail: data.url,
+														}
+													)
+											  )
+											: window.open(data.url, "_blank");
+									}}
 								>
 									<div className="flex-shrink-0 h-20 w-24 bg-content/5 rounded relative flex items-center justify-center">
 										<svg
@@ -288,12 +323,12 @@ function App() {
 											viewBox="0 0 24 24"
 											strokeWidth={1.5}
 											stroke="currentColor"
-											className="w-6 h-6"
+											className="size-8 opacity-50"
 										>
 											<path
 												strokeLinecap="round"
 												strokeLinejoin="round"
-												d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z"
+												d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"
 											/>
 										</svg>
 
@@ -301,7 +336,7 @@ function App() {
 											<img
 												src={data.image}
 												alt=""
-												className="absolute inset-0 size-full rounded bg-card"
+												className="absolute inset-0 size-full object-cover rounded bg-card"
 												onError={(e) =>
 													(e.target.style.opacity = 0)
 												}
@@ -310,10 +345,16 @@ function App() {
 									</div>
 
 									<div className="flex flex-col">
-										<label className="mb-px relative">
+										<label
+											className="mb-1 relative self-start"
+											title="Change group"
+										>
 											<select
-												className="focus:outline-none"
+												className="focus:outline-none appearance-none rounded-lg bg-content/10 inline-flex items-center justify-center h-6 px-2 text-center text-[10px] uppercase tracking-wider"
 												defaultValue={data.group}
+												onClick={(e) =>
+													e.stopPropagation()
+												}
 												onChange={(e) =>
 													setGroup(
 														doc.id,
@@ -324,6 +365,7 @@ function App() {
 												<option>🌎 General</option>
 												<option>📺 Watch</option>
 												<option>🧪 Learn</option>
+												<option>🎧 Listen</option>
 											</select>
 										</label>
 										<h3 className="font-medium truncate">
@@ -333,7 +375,28 @@ function App() {
 											{data.description}
 										</p>
 									</div>
-								</button>
+
+									<label
+										title="Remove"
+										className="cursor-pointer absolute right-2 top-2 size-8 focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-70 hover:opacity-100"
+										onClick={(e) => removeEntry(e, doc.id)}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											strokeWidth={1.5}
+											stroke="currentColor"
+											className="size-5"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												d="M6 18 18 6M6 6l12 12"
+											/>
+										</svg>
+									</label>
+								</div>
 							);
 						}}
 					</DragDropList>
