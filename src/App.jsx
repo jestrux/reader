@@ -7,11 +7,13 @@ import {
 	orderBy,
 	query,
 	setDoc,
+	where,
 } from "firebase/firestore";
 import { db } from "./firebaseApp";
 import { useQuery } from "@tanstack/react-query";
 import DragDropList from "./DragDropList";
 import { useEffect, useState } from "react";
+import Loader from "./Loader";
 
 const fromColor = "#8BC34A";
 const toColor = "#4CAF50";
@@ -147,6 +149,8 @@ async function processUrl(url) {
 function App() {
 	const randomId = () => Math.random().toString(36).substring(7);
 	const [cacheKey, setCacheKey] = useState(randomId());
+	const [groupFilter, setGroupFilter] = useState("");
+	const groups = ["🌎 General", "📺 Watch", "🧪 Learn", "🎧 Listen"];
 
 	const {
 		isPending: loading,
@@ -155,8 +159,17 @@ function App() {
 		refetch,
 	} = useQuery({
 		queryKey: ["collections", cacheKey, setCacheKey],
-		queryFn: () =>
-			getDocs(query(collection(db, "reader"), orderBy("index", "desc"))),
+		queryFn: () => {
+			var params = [
+				collection(db, "reader"),
+				...(groupFilter
+					? [where("group", "==", groupFilter), orderBy("group")]
+					: []),
+				orderBy("index", "desc"),
+			];
+
+			return getDocs(query(...params));
+		},
 	});
 
 	useEffect(() => {
@@ -180,7 +193,6 @@ function App() {
 				...(entry ?? {}),
 				index: value?.docs.length ?? 1,
 				group: "🌎 General",
-				// group: "👓 general",
 				createdAt: new Date(),
 			});
 
@@ -223,7 +235,7 @@ function App() {
 
 	return (
 		<div
-			className="min-h-screen bg-canvas text-content"
+			className="min-h-screen bg-canvas text-content relative"
 			style={
 				{
 					// background: `linear-gradient(-45deg, ${fromColor}, ${toColor})`,
@@ -283,124 +295,172 @@ function App() {
 				</span>
 			</button>
 
-			<div className="p-3 lg:p-6 max-w-4xl mx-auto">
-				<div className="text-center">
-					{error && <strong>Error: {JSON.stringify(error)}</strong>}
-					{!value && loading && <span>Collection: Loading...</span>}
+			<div className="max-w-4xl mx-auto">
+				<div className="p-4 sticky border-b top-0 bg-canvas z-20 w-full overflow-x-auto">
+					<div className="flex items-center gap-2">
+						<button
+							className={`${
+								!groupFilter && "bg-content/10"
+							} focus:outline-none appearance-none rounded-lg border border-content/5 inline-flex items-center justify-center h-6 px-2 text-center text-[10px] uppercase tracking-wider`}
+							onClick={() => {
+								setGroupFilter("");
+								refreshData();
+							}}
+						>
+							All
+						</button>
+						{groups.map((group) => (
+							<button
+								key={group}
+								className={`${
+									groupFilter == group && "bg-content/10"
+								} focus:outline-none appearance-none rounded-lg border border-content/5 inline-flex items-center justify-center h-6 px-2 text-center text-[10px] uppercase tracking-wider`}
+								onClick={() => {
+									setGroupFilter(group);
+									refreshData();
+								}}
+							>
+								{group}
+							</button>
+						))}
+					</div>
 				</div>
 
-				{value && (
-					<DragDropList
-						key={cacheKey}
-						className="flex flex-col gap-2"
-						items={value.docs}
-						onChange={setState}
-					>
-						{({ item: doc }) => {
-							var data = doc.data();
+				<div className="p-4">
+					<div className="text-center">
+						{error && (
+							<strong>Error: {JSON.stringify(error)}</strong>
+						)}
+						{!value && loading && (
+							<div className="py-4 flex justify-center text-content/20">
+								<Loader
+									color="currentColor"
+									size={60}
+									thickness={3.5}
+								/>
+							</div>
+						)}
+					</div>
 
-							return (
-								<div
-									key={doc.id}
-									className="group relative w-full text-left bg-card rounded-md p-2 lg:p-4 border border-stroke shadow-sm flex items-center gap-3 lg:gap-6 focus:outline-none"
-									onClick={() => {
-										onElectron
-											? window.dispatchEvent(
-													new CustomEvent(
-														"open-url",
-														{
-															detail: data.url,
-														}
-													)
-											  )
-											: window.open(data.url, "_blank");
-									}}
-								>
-									<div className="flex-shrink-0 h-20 w-24 bg-content/5 rounded relative flex items-center justify-center">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											strokeWidth={1.5}
-											stroke="currentColor"
-											className="size-8 opacity-50"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"
-											/>
-										</svg>
+					{value && (
+						<DragDropList
+							key={cacheKey}
+							className="flex flex-col gap-2"
+							items={value.docs}
+							onChange={setState}
+						>
+							{({ item: doc }) => {
+								var data = doc.data();
 
-										{data.image && (
-											<img
-												src={data.image}
-												alt=""
-												className="absolute inset-0 size-full object-cover rounded bg-card"
-												onError={(e) =>
-													(e.target.style.opacity = 0)
-												}
-											/>
-										)}
-									</div>
-
-									<div className="flex flex-col">
-										<label
-											className="mb-1 relative self-start"
-											title="Change group"
-										>
-											<select
-												className="focus:outline-none appearance-none rounded-lg bg-content/10 inline-flex items-center justify-center h-6 px-2 text-center text-[10px] uppercase tracking-wider"
-												defaultValue={data.group}
-												onClick={(e) =>
-													e.stopPropagation()
-												}
-												onChange={(e) =>
-													setGroup(
-														doc.id,
-														e.target.value
-													)
-												}
-											>
-												<option>🌎 General</option>
-												<option>📺 Watch</option>
-												<option>🧪 Learn</option>
-												<option>🎧 Listen</option>
-											</select>
-										</label>
-										<h3 className="font-medium truncate">
-											{data.title}
-										</h3>
-										<p className="text-sm/relaxed opacity-50 truncate">
-											{data.description}
-										</p>
-									</div>
-
-									<label
-										title="Remove"
-										className="cursor-pointer absolute right-2 top-2 size-8 focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-70 hover:opacity-100"
-										onClick={(e) => removeEntry(e, doc.id)}
+								return (
+									<div
+										key={doc.id}
+										className="group relative w-full text-left bg-card rounded-md p-2 lg:p-4 border border-stroke shadow-sm flex items-center gap-3 lg:gap-6 focus:outline-none"
+										onClick={() => {
+											onElectron
+												? window.dispatchEvent(
+														new CustomEvent(
+															"open-url",
+															{
+																detail: data.url,
+															}
+														)
+												  )
+												: window.open(
+														data.url,
+														"_blank"
+												  );
+										}}
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											strokeWidth={1.5}
-											stroke="currentColor"
-											className="size-5"
+										<div className="flex-shrink-0 h-20 w-24 bg-content/5 rounded relative flex items-center justify-center">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												strokeWidth={1.5}
+												stroke="currentColor"
+												className="size-8 opacity-50"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"
+												/>
+											</svg>
+
+											{data.image && (
+												<img
+													src={data.image}
+													alt=""
+													className="absolute inset-0 size-full object-cover rounded bg-card"
+													onError={(e) =>
+														(e.target.style.opacity = 0)
+													}
+												/>
+											)}
+										</div>
+
+										<div className="flex flex-col">
+											<label
+												className="mb-1 relative self-start"
+												title="Change group"
+											>
+												<select
+													className="focus:outline-none appearance-none rounded-lg bg-content/10 inline-flex items-center justify-center h-6 px-2 text-center text-[10px] uppercase tracking-wider"
+													defaultValue={data.group}
+													onClick={(e) =>
+														e.stopPropagation()
+													}
+													onChange={(e) =>
+														setGroup(
+															doc.id,
+															e.target.value
+														)
+													}
+												>
+													{groups.map((group) => (
+														<option key={group}>
+															{group}
+														</option>
+													))}
+												</select>
+											</label>
+											<h3 className="font-medium truncate">
+												{data.title}
+											</h3>
+											<p className="text-sm/relaxed opacity-50 truncate">
+												{data.description}
+											</p>
+										</div>
+
+										<label
+											title="Remove"
+											className="cursor-pointer absolute right-2 top-2 size-8 focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-70 hover:opacity-100"
+											onClick={(e) =>
+												removeEntry(e, doc.id)
+											}
 										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												d="M6 18 18 6M6 6l12 12"
-											/>
-										</svg>
-									</label>
-								</div>
-							);
-						}}
-					</DragDropList>
-				)}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												strokeWidth={1.5}
+												stroke="currentColor"
+												className="size-5"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M6 18 18 6M6 6l12 12"
+												/>
+											</svg>
+										</label>
+									</div>
+								);
+							}}
+						</DragDropList>
+					)}
+				</div>
 			</div>
 		</div>
 	);

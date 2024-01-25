@@ -10,7 +10,7 @@
 		/>
 		<meta
 			name="theme-color"
-			content="#E5E5E5"
+			content="#F0F0F0"
 			media="(prefers-color-scheme: light)"
 		/>
 		<meta
@@ -22,6 +22,32 @@
 		<link rel="manifest" href="manifest.json" />
 
 		<title>Reader</title>
+
+		<script>
+			if (navigator.appVersion?.indexOf("Win") != -1)
+				document.documentElement.classList.add("windows");
+
+			setTimeout(() => {
+				updateColorScheme(
+					window.matchMedia &&
+						window.matchMedia("(prefers-color-scheme: dark)")
+							.matches
+						? "dark"
+						: "light"
+				);
+
+				window
+					.matchMedia("(prefers-color-scheme: dark)")
+					.addEventListener("change", (event) => {
+						updateColorScheme(event.matches ? "dark" : "light");
+					});
+			});
+
+			function updateColorScheme(colorScheme) {
+				document.body.classList.remove("dark", "light");
+				document.body.classList.add(colorScheme);
+			}
+		</script>
 	</head>
 	<body class="bg-canvas text-content">
 		<div id="root"></div>
