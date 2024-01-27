@@ -274,7 +274,7 @@ function App() {
 				className="fixed inset-x-0 mx-auto z-10 shadow-md bg-white dark:bg-[#3c3c3c] border border-transparent dark:border-content/20 h-12 w-32 flex items-center justify-center gap-2 rounded-full px-3.5 focus:outline-none"
 				onClick={handleAdd}
 				style={{
-					bottom: onElectron ? "1.2rem" : "3rem",
+					bottom: onElectron ? "1.2rem" : "2.8rem",
 				}}
 			>
 				<svg className="h-4 mb-px" viewBox="0 0 24 24">
@@ -323,7 +323,7 @@ function App() {
 				</span>
 			</button>
 
-			<div className="max-w-4xl mx-auto">
+			<div className="max-w-4xl mx-auto pb-24">
 				<div className="p-4 sticky border-b top-0 bg-card z-20 w-full overflow-x-auto">
 					<div className="flex items-center gap-2">
 						<button
