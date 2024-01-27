@@ -224,7 +224,7 @@ function App() {
 			await addDoc(collection(db, "reader"), {
 				...(entry ?? {}),
 				index: entries.length ?? 1,
-				group: "🌎 General",
+				group: groupFilter ?? "🌎 General",
 				createdAt: new Date(),
 			});
 		} catch (error) {
@@ -324,7 +324,7 @@ function App() {
 			</button>
 
 			<div className="max-w-4xl mx-auto">
-				<div className="p-4 sticky border-b top-0 bg-canvas z-20 w-full overflow-x-auto">
+				<div className="p-4 sticky border-b top-0 bg-card z-20 w-full overflow-x-auto">
 					<div className="flex items-center gap-2">
 						<button
 							className={`${
