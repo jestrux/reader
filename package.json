@@ -9,17 +9,30 @@
 		"lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
 		"preview": "vite preview",
 		"desktop": "electron docs/desktop.cjs",
+		"assets": "npx @capacitor/assets generate",
+		"ios": "npx cap run ios",
+		"electron": "npx cap open @capacitor-community/electron",
+		"sync": "npx cap sync @capacitor-community/electron",
 		"package": "electron-packager ./docs --platform=darwin --arch=x64 --icon=docs/icon.icns --overwrite"
 	},
 	"dependencies": {
+		"@capacitor-community/electron": "^5.0.1",
+		"@capacitor/cli": "^5.6.0",
+		"@capacitor/clipboard": "^5.0.6",
+		"@capacitor/core": "^5.6.0",
+		"@capacitor/ios": "^5.6.0",
+		"@capacitor/preferences": "^5.0.6",
+		"@capacitor/toast": "^5.0.6",
 		"@tanstack/react-query": "^5.17.19",
 		"firebase": "^10.7.2",
+		"menubar": "^9.4.0",
 		"react": "^18.2.0",
 		"react-beautiful-dnd": "^13.1.1",
 		"react-dom": "^18.2.0",
-		"menubar": "^9.4.0"
+		"send-intent": "^5.0.0"
 	},
 	"devDependencies": {
+		"@capacitor/assets": "^3.0.4",
 		"@types/react": "^18.2.43",
 		"@types/react-dom": "^18.2.17",
 		"@vitejs/plugin-react": "^4.2.1",

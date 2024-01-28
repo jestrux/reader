@@ -1,0 +1,17 @@
+{
+	"appId": "tz.co.reader",
+	"appName": "Reader",
+	"webDir": "docs",
+	"server": {
+		"androidScheme": "https"
+	},
+	"electron": {
+		"customUrlScheme": "reader",
+		"trayIconAndMenuEnabled": true,
+		"splashScreenEnabled": false,
+		"splashScreenImageName": "splash.png",
+		"hideMainWindowOnLaunch": false,
+		"deepLinkingEnabled": true,
+		"deepLinkingCustomProtocol": "reader"
+	}
+}

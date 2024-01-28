@@ -1,5 +1,4 @@
 import {
-	addDoc,
 	collection,
 	deleteDoc,
 	doc,
@@ -15,9 +14,17 @@ import { useMutation } from "@tanstack/react-query";
 import DragDropList from "./DragDropList";
 import { useEffect, useState } from "react";
 import Loader from "./Loader";
+import { Clipboard } from "@capacitor/clipboard";
+import { SendIntent } from "send-intent";
+import { Toast } from "@capacitor/toast";
+import { Preferences } from "@capacitor/preferences";
 
-const fromColor = "#8BC34A";
-const toColor = "#4CAF50";
+// const fromColor = "#8BC34A";
+// const fromColor = "#2196F3";
+// const toColor = "#4CAF50";
+
+const fromColor = "#d3ffff";
+const toColor = "#f2ddb0";
 
 function isValidHttpUrl(string) {
 	let url;
@@ -31,135 +38,122 @@ function isValidHttpUrl(string) {
 	return url.protocol === "http:" || url.protocol === "https:";
 }
 
-async function readClipboardText() {
-	const manualRead = () =>
-		new Promise((resolve, reject) => {
-			const textArea = document.createElement("textarea");
-			// textArea.value = text;
-			textArea.style.top = "0";
-			textArea.style.left = "0";
-			textArea.style.position = "fixed";
-
-			document.body.appendChild(textArea);
-			textArea.focus();
-			textArea.select();
-
-			try {
-				const successful = document.execCommand("paste");
-
-				if (successful) resolve(textArea.value);
-				else reject("Failed to paste");
-			} catch (err) {
-				reject(err);
-			}
-
-			document.body.removeChild(textArea);
-		});
-
+async function showToast(message) {
 	try {
-		try {
-			return await navigator.clipboard.readText();
-		} catch (error) {
-			return await manualRead();
-		}
+		await Toast.show({
+			text: message,
+		});
+	} catch (error) {
+		/* empty */
+	}
+}
+
+async function readClipboardText() {
+	try {
+		const { value } = await Clipboard.read();
+		return value;
 	} catch (error) {
 		console.log("Error copying text: ", error);
 		throw "Failed to copy!";
 	}
 }
 
-async function processUrl(url) {
-	var res = await fetch(
-		"https://us-central1-letterplace-c103c.cloudfunctions.net/crawl/" +
-			encodeURIComponent(url)
-	).then((res) => res.text());
-	var div = document.createElement("div");
-	div.innerHTML = res;
+const getGroupFilter = async () =>
+	(await Preferences.get({ key: "groupFilter" })).value ?? "";
 
-	const ogImage = div
-		.querySelector(`[property="og:image"]`)
-		?.getAttribute("content");
+const NewEntry = ({ __id, url, group, onSave }) => {
+	const {
+		// error,
+		// isPending: loading,
+		mutateAsync: saveEntry,
+	} = useMutation({
+		mutationKey: ["add-entry"],
+		mutationFn: async (data) => {
+			const res = await fetch(
+				"https://us-central1-letterplace-c103c.cloudfunctions.net/api/crawl",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(data),
+				}
+			).then((res) => res.json());
 
-	let shortCutIcon = div
-		.querySelector(`[rel="shortcut icon"]`)
-		?.getAttribute("href");
+			if (!res?.success) throw res.error ?? "Failed to add, try again";
 
-	if (shortCutIcon && shortCutIcon.toString().charAt(0) == "/") {
-		let baseUrl = new URL(url).href;
-		if (baseUrl.endsWith("/"))
-			baseUrl = baseUrl.substring(0, baseUrl.length - 1);
-		shortCutIcon = baseUrl + "/" + shortCutIcon.substring(1);
-	}
+			// alert(JSON.stringify(res));
 
-	const appleTouchIcon = div
-		.querySelector(`[rel="apple-touch-icon"]`)
-		?.getAttribute("href");
+			showToast(`${res?.title || "Entry"} Added `);
 
-	const twitterImage = div
-		.querySelector(`[name="twitter:image"]`)
-		?.getAttribute("content");
+			onSave(__id);
+		},
+	});
 
-	const title = div.querySelector(`title`)?.textContent;
-	const ogTitle = div
-		.querySelector(`[property="og:title"]`)
-		?.getAttribute("content");
-	const twitterTitle = div
-		.querySelector(`[name="twitter:title"]`)
-		?.getAttribute("content");
+	useEffect(() => {
+		try {
+			saveEntry({ url, group: group ?? "🌎 General" });
+		} catch (error) {
+			onSave(__id);
+			alert(error);
+		}
+	}, []);
 
-	const description = div
-		.querySelector(`[property="description"]`)
-		?.getAttribute("content");
+	return (
+		<div className="pb-2 group">
+			<div className="relative w-full text-left bg-card rounded-md p-2 lg:p-4 border border-stroke shadow-sm flex items-center gap-3 lg:gap-6 focus:outline-none">
+				<div className="flex-shrink-0 h-20 w-24 bg-content/5 rounded relative flex items-center justify-center">
+					<Loader color="currentColor" size={40} thickness={3.5} />
+				</div>
 
-	const ogDescription = div
-		.querySelector(`[property="og:description"]`)
-		?.getAttribute("content");
-
-	const twitterDescription = div
-		.querySelector(`[name="twitter:description"]`)
-		?.getAttribute("content");
-
-	return {
-		url,
-		image:
-			[
-				...new Set(
-					[
-						twitterImage,
-						ogImage,
-						appleTouchIcon,
-						shortCutIcon,
-					].filter((v) => v)
-				),
-			]?.[0] ?? null,
-		title:
-			[
-				...new Set([twitterTitle, ogTitle, title].filter((v) => v)),
-			]?.[0] ?? null,
-		description:
-			[
-				...new Set(
-					[twitterDescription, ogDescription, description].filter(
-						(v) => v
-					)
-				),
-			]?.[0] ?? null,
-	};
-}
+				<div className="flex flex-col">
+					<label className="relative self-start" title="Change group">
+						<select
+							className="focus:outline-none appearance-none bg-transparent rounded-lg inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-wider"
+							defaultValue={group}
+						>
+							<option>{group}</option>
+						</select>
+					</label>
+					<h3 className="font-medium truncate">{url}</h3>
+					<p className="text-sm/relaxed opacity-50 truncate">
+						Saving new entry...
+					</p>
+				</div>
+			</div>
+		</div>
+	);
+};
 
 function App() {
 	const randomId = () => Math.random().toString(36).substring(7);
+	const [newEntries, setNewEntries] = useState([]);
 	const [entries, setEntries] = useState(null);
 	const [cacheKey, setCacheKey] = useState(randomId());
-	const [groupFilter, setGroupFilter] = useState("");
-	const groups = ["🌎 General", "📺 Watch", "🧪 Learn", "🎧 Listen"];
+	const [groupFilter, _setGroupFilter] = useState("");
+
+	const setGroupFilter = async (value) => {
+		_setGroupFilter(value);
+
+		try {
+			await Preferences.set({
+				key: "groupFilter",
+				value,
+			});
+		} catch (error) {
+			/* empty */
+		}
+
+		refreshData();
+	};
+	const groups = ["📺 Watch", "🧪 Learn", "🎧 Listen", "🌎 General"];
 	const {
 		error,
 		isPending: loading,
-		mutateAsync,
+		mutateAsync: fetchEntries,
 	} = useMutation({
 		mutationKey: ["collections", cacheKey, setCacheKey],
-		mutationFn: () => {
+		mutationFn: async (groupFilter) => {
 			var params = [
 				collection(db, "reader"),
 				...(groupFilter
@@ -168,34 +162,41 @@ function App() {
 				orderBy("index", "desc"),
 			];
 
-			return getDocs(query(...params));
+			var res = await getDocs(query(...params));
+			return res.docs;
 		},
 	});
 
-	// const {
-	// 	isPending: loading,
-	// 	error,
-	// 	data: value,
-	// 	refetch,
-	// } = useQuery({
-	// 	queryKey: ["collections", cacheKey, setCacheKey],
-	// 	queryFn: () => {
-	// 		var params = [
-	// 			collection(db, "reader"),
-	// 			...(groupFilter
-	// 				? [where("group", "==", groupFilter), orderBy("group")]
-	// 				: []),
-	// 			orderBy("index", "desc"),
-	// 		];
+	const listenForShare = async () => {
+		try {
+			const result = await SendIntent.checkSendIntentReceived();
+			if (result?.title?.length) {
+				handleAddEntry({
+					url: decodeURIComponent(result.title),
+					fromShareSheet: true,
+				});
+			}
+		} catch (error) {
+			alert("Share process failed: ", error);
+		}
+	};
 
-	// 		return getDocs(query(...params));
-	// 	},
-	// });
+	useEffect(() => {
+		const groupId = groupFilter ?? "All";
+		const filterButton = document.querySelector(
+			`[data-group-filter="${groupId}"]`
+		);
+		if (filterButton) filterButton.scrollIntoView();
+	}, [groupFilter]);
 
 	useEffect(() => {
 		if (!entries) refreshData();
 
 		document.addEventListener("focus", refreshData, false);
+
+		listenForShare();
+
+		window.addEventListener("sendIntentReceived", listenForShare, false);
 
 		const cancelSnapshotListener = onSnapshot(
 			collection(db, "reader"),
@@ -204,29 +205,41 @@ function App() {
 
 		return () => {
 			document.removeEventListener("focus", refreshData);
+			window.removeEventListener(
+				"sendIntentReceived",
+				listenForShare,
+				false
+			);
 			cancelSnapshotListener();
 		};
 	}, []);
 
 	const refreshData = async () => {
-		var res = await mutateAsync();
-		setEntries(res.docs);
+		const groupFilter = await getGroupFilter();
+		_setGroupFilter(groupFilter);
+		setEntries(await fetchEntries(groupFilter));
 		setCacheKey(randomId());
 	};
 
-	async function handleAdd() {
+	async function handleAddEntry({
+		url: shareSheetUrl,
+		fromShareSheet = false,
+	} = {}) {
 		try {
-			var url = await readClipboardText();
+			const url = fromShareSheet
+				? shareSheetUrl
+				: await readClipboardText();
+
 			if (!isValidHttpUrl(url)) throw "Invalid url";
 
-			var entry = await processUrl(url);
-			console.log("New entry: ", entry);
-			await addDoc(collection(db, "reader"), {
-				...(entry ?? {}),
-				index: entries.length ?? 1,
-				group: groupFilter ?? "🌎 General",
-				createdAt: new Date(),
-			});
+			setNewEntries([
+				...newEntries,
+				{
+					__id: randomId(),
+					url,
+					group: (await getGroupFilter()) || "🌎 General",
+				},
+			]);
 		} catch (error) {
 			alert(error);
 		}
@@ -262,17 +275,22 @@ function App() {
 	const onElectron = document.body.classList.contains("on-electron");
 
 	return (
-		<div
-			className="min-h-screen bg-canvas text-content relative"
-			style={
+		<div className="min-h-screen bg-canvas text-content relative">
+			<style>
 				{
-					// background: `linear-gradient(-45deg, ${fromColor}, ${toColor})`,
+					/*css*/ `
+						:root {
+							--gradient-bg: linear-gradient(45deg, ${fromColor}, ${toColor});
+							--gradient-bg-text: #3E3215;
+						}
+					`
 				}
-			}
-		>
+			</style>
+
 			<button
-				className="fixed inset-x-0 mx-auto z-10 shadow-md bg-white dark:bg-[#3c3c3c] border border-transparent dark:border-content/20 h-12 w-32 flex items-center justify-center gap-2 rounded-full px-3.5 focus:outline-none"
-				onClick={handleAdd}
+				id="fab"
+				className="fixed inset-x-0 mx-auto z-10 shadow border border-content/5 dark:border-content/20 h-12 w-32 flex items-center justify-center gap-2 rounded-full px-3.5 focus:outline-none"
+				onClick={handleAddEntry}
 				style={{
 					bottom: onElectron ? "1.2rem" : "2.8rem",
 				}}
@@ -280,11 +298,11 @@ function App() {
 				<svg className="h-4 mb-px" viewBox="0 0 24 24">
 					<defs>
 						<linearGradient
-							id="grad1"
+							id="gradientMask"
 							x1="0%"
 							y1="0%"
 							x2="100%"
-							y2="0%"
+							y2="100%"
 						>
 							<stop
 								offset="0%"
@@ -306,55 +324,81 @@ function App() {
 					<path
 						d="M12 4.5v15m7.5-7.5h-15"
 						fill="none"
-						stroke="url(#grad1)"
-						strokeWidth="4"
+						strokeWidth="3.5"
 						strokeLinecap="round"
 					/>
 				</svg>
-				<span
-					className="mr-0.5 text-base/none tracking-wide font-bold uppercase"
-					style={{
-						background: `linear-gradient(-45deg, ${fromColor}, ${toColor})`,
-						WebkitBackgroundClip: "text",
-						color: "transparent",
-					}}
-				>
+				<span className="mr-0.5 text-base/none tracking-wide font-semibold uppercase">
 					Add
 				</span>
 			</button>
 
-			<div className="max-w-4xl mx-auto pb-24">
-				<div className="p-4 sticky border-b top-0 bg-card z-20 w-full overflow-x-auto">
-					<div className="flex items-center gap-2">
+			<div className="pb-24">
+				<div
+					id="appBar"
+					className={`sticky shadow-sm border-b top-0 z-20 w-screen overflow-auto`}
+				>
+					<div
+						className="px-4 max-w-4xl mx-auto flex items-center gap-2"
+						style={{
+							marginTop: "env(safe-area-inset-top)",
+							height: "60px",
+						}}
+					>
 						<button
+							data-group-filter="All"
 							className={`${
-								!groupFilter && "bg-content/10"
-							} focus:outline-none appearance-none rounded-lg border border-content/5 inline-flex items-center justify-center h-6 px-2 text-center text-[10px] uppercase tracking-wider`}
-							onClick={() => {
-								setGroupFilter("");
-								refreshData();
-							}}
+								!groupFilter
+									? "bg-white border-white/20 text-[--appbar-color] dark:bg-white/10 dark:border-white/10 dark:text-white"
+									: "opacity-70 border-transparent"
+							} flex-shrink-0 focus:outline-none rounded-lg border inline-flex items-center justify-center h-8 px-2.5 text-center text-xs uppercase font-bold`}
+							onClick={() => setGroupFilter("")}
 						>
 							All
 						</button>
 						{groups.map((group) => (
 							<button
 								key={group}
+								data-group-filter={group}
 								className={`${
-									groupFilter == group && "bg-content/10"
-								} focus:outline-none appearance-none rounded-lg border border-content/5 inline-flex items-center justify-center h-6 px-2 text-center text-[10px] uppercase tracking-wider`}
-								onClick={() => {
-									setGroupFilter(group);
-									refreshData();
-								}}
+									groupFilter == group
+										? "bg-white border-white/20 text-[--appbar-color] dark:bg-white/10 dark:border-white/10 dark:text-white"
+										: "opacity-70 border-transparent"
+								} flex-shrink-0 focus:outline-none rounded-lg border inline-flex items-center justify-center h-8 px-2.5 text-center text-xs uppercase font-bold`}
+								style={{ wordSpacing: "0.25rem" }}
+								onClick={() => setGroupFilter(group)}
 							>
 								{group}
 							</button>
 						))}
+
+						<span>&nbsp;</span>
 					</div>
 				</div>
 
-				<div className="p-4">
+				<div className="max-w-4xl mx-auto p-4">
+					{newEntries.map((entry, index) => (
+						<div
+							key={index}
+							style={{
+								display:
+									!groupFilter?.length ||
+									entry.group == groupFilter
+										? ""
+										: "none",
+							}}
+						>
+							<NewEntry
+								{...entry}
+								onSave={(__id) =>
+									setNewEntries((newEntries) =>
+										newEntries.filter((e) => e.__id != __id)
+									)
+								}
+							/>
+						</div>
+					))}
+
 					<div className="text-center">
 						{error && (
 							<strong>Error: {JSON.stringify(error)}</strong>
@@ -373,7 +417,6 @@ function App() {
 					{entries && (
 						<DragDropList
 							key={cacheKey}
-							className="flex flex-col gap-2"
 							items={entries}
 							onChange={setState}
 						>
@@ -381,108 +424,111 @@ function App() {
 								var data = doc.data();
 
 								return (
-									<div
-										key={doc.id}
-										className="group relative w-full text-left bg-card rounded-md p-2 lg:p-4 border border-stroke shadow-sm flex items-center gap-3 lg:gap-6 focus:outline-none"
-										onClick={() => {
-											onElectron
-												? window.dispatchEvent(
-														new CustomEvent(
-															"open-url",
-															{
-																detail: data.url,
-															}
-														)
-												  )
-												: window.open(
-														data.url,
-														"_blank"
-												  );
-										}}
-									>
-										<div className="flex-shrink-0 h-20 w-24 bg-content/5 rounded relative flex items-center justify-center">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												strokeWidth={1.5}
-												stroke="currentColor"
-												className="size-8 opacity-50"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"
-												/>
-											</svg>
-
-											{data.image && (
-												<img
-													src={data.image}
-													alt=""
-													className="absolute inset-0 size-full object-cover rounded bg-card"
-													onError={(e) =>
-														(e.target.style.opacity = 0)
-													}
-												/>
-											)}
-										</div>
-
-										<div className="flex flex-col">
-											<label
-												className="mb-1 relative self-start"
-												title="Change group"
-											>
-												<select
-													className="focus:outline-none appearance-none rounded-lg bg-content/10 inline-flex items-center justify-center h-6 px-2 text-center text-[10px] uppercase tracking-wider"
-													defaultValue={data.group}
-													onClick={(e) =>
-														e.stopPropagation()
-													}
-													onChange={(e) =>
-														setGroup(
-															doc.id,
-															e.target.value
-														)
-													}
-												>
-													{groups.map((group) => (
-														<option key={group}>
-															{group}
-														</option>
-													))}
-												</select>
-											</label>
-											<h3 className="font-medium truncate">
-												{data.title}
-											</h3>
-											<p className="text-sm/relaxed opacity-50 truncate">
-												{data.description}
-											</p>
-										</div>
-
-										<label
-											title="Remove"
-											className="cursor-pointer absolute right-2 top-2 size-8 focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-70 hover:opacity-100"
-											onClick={(e) =>
-												removeEntry(e, doc.id)
-											}
+									<div key={doc.id} className="pb-2 group">
+										<div
+											className="relative w-full text-left bg-card rounded-md p-2 lg:p-4 border border-stroke shadow-sm flex items-center gap-3 lg:gap-6 focus:outline-none"
+											onClick={() => {
+												onElectron
+													? window.dispatchEvent(
+															new CustomEvent(
+																"open-url",
+																{
+																	detail: data.url,
+																}
+															)
+													  )
+													: window.open(
+															data.url,
+															"_blank"
+													  );
+											}}
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												strokeWidth={1.5}
-												stroke="currentColor"
-												className="size-5"
+											<div className="flex-shrink-0 h-20 w-24 bg-content/5 rounded relative flex items-center justify-center">
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													strokeWidth={1.5}
+													stroke="currentColor"
+													className="size-8 opacity-50"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"
+													/>
+												</svg>
+
+												{data.image && (
+													<img
+														src={data.image}
+														alt=""
+														className="absolute inset-0 size-full object-cover rounded bg-card"
+														onError={(e) =>
+															(e.target.style.opacity = 0)
+														}
+													/>
+												)}
+											</div>
+
+											<div className="flex flex-col">
+												<label
+													className="relative self-start"
+													title="Change group"
+												>
+													<select
+														className="focus:outline-none appearance-none bg-transparent inline-flex items-center text-[10px] font-bold uppercase tracking-wider"
+														defaultValue={
+															data.group
+														}
+														onClick={(e) =>
+															e.stopPropagation()
+														}
+														onChange={(e) =>
+															setGroup(
+																doc.id,
+																e.target.value
+															)
+														}
+													>
+														{groups.map((group) => (
+															<option key={group}>
+																{group}
+															</option>
+														))}
+													</select>
+												</label>
+												<h3 className="font-medium truncate">
+													{data.title}
+												</h3>
+												<p className="text-sm/relaxed opacity-50 truncate">
+													{data.description}
+												</p>
+											</div>
+
+											<label
+												title="Remove"
+												className="cursor-pointer absolute right-2 top-2 size-8 focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-70 hover:opacity-100"
+												onClick={(e) =>
+													removeEntry(e, doc.id)
+												}
 											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M6 18 18 6M6 6l12 12"
-												/>
-											</svg>
-										</label>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													strokeWidth={1.5}
+													stroke="currentColor"
+													className="size-5"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														d="M6 18 18 6M6 6l12 12"
+													/>
+												</svg>
+											</label>
+										</div>
 									</div>
 								);
 							}}

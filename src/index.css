@@ -29,3 +29,49 @@
 .flex > * {
 	min-width: 0;
 }
+
+#appBar {
+	background: var(--gradient-bg);
+	color: var(--gradient-bg-text);
+}
+
+#fab {
+	background: var(--gradient-bg-text);
+}
+
+#fab path {
+	stroke: url(#gradientMask);
+}
+
+@supports (background-clip: text) {
+	#fab span {
+		background: var(--gradient-bg);
+		background-clip: text;
+		--webkit-background-clip: text;
+		color: transparent;
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	#appBar {
+		background: rgb(var(--card-color));
+		color: rgb(var(--content-color));
+	}
+
+	#fab {
+		background: var(--gradient-bg);
+		color: var(--gradient-bg-text);
+	}
+
+	#fab path {
+		stroke: currentColor;
+	}
+
+	@supports (background-clip: text) {
+		#fab span {
+			background: var(--gradient-bg-text);
+			background-clip: text;
+			--webkit-background-clip: text;
+		}
+	}
+}

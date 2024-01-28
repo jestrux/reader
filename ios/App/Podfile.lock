@@ -1,0 +1,46 @@
+PODS:
+  - Capacitor (5.6.0):
+    - CapacitorCordova
+  - CapacitorClipboard (5.0.6):
+    - Capacitor
+  - CapacitorCordova (5.6.0)
+  - CapacitorPreferences (5.0.6):
+    - Capacitor
+  - CapacitorToast (5.0.6):
+    - Capacitor
+  - SendIntent (0.0.1):
+    - Capacitor
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorClipboard (from `../../node_modules/@capacitor/clipboard`)"
+  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
+  - "CapacitorToast (from `../../node_modules/@capacitor/toast`)"
+  - SendIntent (from `../../node_modules/send-intent`)
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorClipboard:
+    :path: "../../node_modules/@capacitor/clipboard"
+  CapacitorCordova:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorPreferences:
+    :path: "../../node_modules/@capacitor/preferences"
+  CapacitorToast:
+    :path: "../../node_modules/@capacitor/toast"
+  SendIntent:
+    :path: "../../node_modules/send-intent"
+
+SPEC CHECKSUMS:
+  Capacitor: ebfc16cdb8116d04c101686b080342872da42d43
+  CapacitorClipboard: 77edf49827ea21da2a9c05c690a4a6a4d07199c4
+  CapacitorCordova: 931b48fcdbc9bc985fc2f16cec9f77c794a27729
+  CapacitorPreferences: f03954bcb0ff09c792909e46bff88e3183c16b10
+  CapacitorToast: bb0d79b78d9c27c0199b57f735dd50b8fc363489
+  SendIntent: 0a17b6984c4f27e9dfa56513267ba2c044a5a6c8
+
+PODFILE CHECKSUM: 6b58cd157b06d062488aedd558e8a926ddc2e1de
+
+COCOAPODS: 1.12.0

@@ -1,12 +1,14 @@
 import * as functions from "firebase-functions";
+import * as admin from "./admin.js";
+
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
-import parse from "node-html-parser";
+import { parse } from "node-html-parser";
 
-// eslint-disable-next-line no-unused-vars
 function processWebsite(url, content) {
 	const div = parse(content);
+
 	const ogImage = div
 		.querySelector(`[property="og:image"]`)
 		?.getAttribute("content");
@@ -53,35 +55,57 @@ function processWebsite(url, content) {
 
 	return {
 		url,
-		image: [
-			...new Set(
-				[twitterImage, ogImage, appleTouchIcon, shortCutIcon].filter(
-					(v) => v
-				)
-			),
-		]?.[0],
-		title: [
-			...new Set([twitterTitle, ogTitle, title].filter((v) => v)),
-		]?.[0],
-		description: [
-			...new Set(
-				[twitterDescription, ogDescription, description].filter(
-					(v) => v
-				)
-			),
-		]?.[0],
+		image:
+			[
+				...new Set(
+					[
+						twitterImage,
+						ogImage,
+						appleTouchIcon,
+						shortCutIcon,
+					].filter((v) => v)
+				),
+			]?.[0] ?? null,
+		title:
+			[
+				...new Set([twitterTitle, ogTitle, title].filter((v) => v)),
+			]?.[0] ?? null,
+		description:
+			[
+				...new Set(
+					[twitterDescription, ogDescription, description].filter(
+						(v) => v
+					)
+				),
+			]?.[0] ?? null,
 	};
 }
 
 const app = express();
 app.use(cors({ origin: "*" }));
-app.get("/:url", async (req, res) => {
-	const url = req.params.url;
+app.post("/crawl", async (req, res) => {
+	const url = req.body.url;
 	const response = await fetch(url);
 	const content = await response.text();
-	// processWebsite(url, content);
+	const entry = processWebsite(url, content);
 
-	res.status(200).send(content);
+	const collectionRef = admin.db.collection("reader");
+	const entries = (await collectionRef.get()).docs;
+
+	try {
+		const payload = {
+			...(entry ?? {}),
+			index: (entries?.length ?? 0) + 1,
+			group: req.body.group ?? "🌎 General",
+			createdAt: new Date(),
+		};
+
+		await collectionRef.doc().create(payload);
+
+		res.status(200).json({ ...payload, success: true });
+	} catch (error) {
+		res.status(500).json({ success: false, error });
+	}
 });
 
-export const crawl = functions.https.onRequest(app);
+export const api = functions.https.onRequest(app);
