@@ -8,12 +8,12 @@
 		"build": "vite build",
 		"lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
 		"preview": "vite preview",
-		"desktop": "electron docs/desktop.cjs",
 		"assets": "npx @capacitor/assets generate",
 		"ios": "npx cap run ios",
-		"electron": "npx cap open @capacitor-community/electron",
-		"sync": "npx cap sync @capacitor-community/electron",
-		"package": "electron-packager ./docs --platform=darwin --arch=x64 --icon=docs/icon.icns --overwrite"
+		"predesktop": "vite build && cp -R ./docs/. ./electron/build",
+		"desktop": "electron electron/index.js",
+		"predesktop:package": "vite build && cp -R ./docs/. ./electron/build",
+		"desktop:package": "electron-packager ./electron --appname=Reader --platform=darwin --arch=x64 --icon=electron/icon.icns --overwrite"
 	},
 	"dependencies": {
 		"@capacitor-community/electron": "^5.0.1",
