@@ -9,7 +9,7 @@
 		"lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
 		"preview": "vite preview",
 		"assets": "npx @capacitor/assets generate",
-		"ios": "npx cap run ios",
+		"ios": "vite build && npx cap run ios",
 		"predesktop": "vite build && cp -R ./docs/. ./electron/build",
 		"desktop": "electron electron/index.js",
 		"predesktop:package": "vite build && cp -R ./docs/. ./electron/build",

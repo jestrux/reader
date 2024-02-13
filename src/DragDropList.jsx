@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 const reorder = (list, startIndex, endIndex) => {
@@ -20,6 +20,7 @@ const DragDropList = ({
 	onChange,
 	children,
 	className,
+	customHandle = false,
 }) => {
 	const [entries, setEntries] = useState(items);
 
@@ -54,13 +55,23 @@ const DragDropList = ({
 									<div
 										ref={provided.innerRef}
 										{...provided.draggableProps}
-										{...provided.dragHandleProps}
+										{...(!customHandle
+											? provided.dragHandleProps
+											: {})}
 										style={getItemStyle(
 											snapshot.isDragging,
 											provided.draggableProps.style
 										)}
 									>
-										{children({ item })}
+										{children({
+											item,
+											...(customHandle
+												? {
+														handleProps:
+															provided.dragHandleProps,
+												  }
+												: {}),
+										})}
 									</div>
 								)}
 							</Draggable>

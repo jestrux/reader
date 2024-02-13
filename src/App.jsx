@@ -99,8 +99,10 @@ const NewEntry = ({ __id, url, group, onSave }) => {
 		}
 	}, []);
 
+	const onElectron = document.body.classList.contains("on-electron");
+
 	return (
-		<div className="pb-2 group">
+		<div className={`pb-2 ${onElectron ? "group" : "lg:group"}`}>
 			<div className="relative w-full text-left bg-card rounded-md p-2 lg:p-4 border border-stroke shadow-sm flex items-center gap-3 lg:gap-6 focus:outline-none">
 				<div className="flex-shrink-0 h-20 w-24 bg-content/5 rounded relative flex items-center justify-center">
 					<Loader color="currentColor" size={40} thickness={3.5} />
@@ -424,7 +426,12 @@ function App() {
 								var data = doc.data();
 
 								return (
-									<div key={doc.id} className="pb-2 group">
+									<div
+										key={doc.id}
+										className={`pb-2 ${
+											onElectron ? "group" : "lg:group"
+										}`}
+									>
 										<div
 											className="relative w-full text-left bg-card rounded-md p-2 lg:p-4 border border-stroke shadow-sm flex items-center gap-3 lg:gap-6 focus:outline-none"
 											onClick={() => {
@@ -508,7 +515,7 @@ function App() {
 
 											<label
 												title="Remove"
-												className="cursor-pointer absolute right-2 top-2 size-8 focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-70 hover:opacity-100"
+												className="cursor-pointer absolute right-2 top-2 size-8 focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-70"
 												onClick={(e) =>
 													removeEntry(e, doc.id)
 												}
