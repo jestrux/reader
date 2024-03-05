@@ -82,7 +82,16 @@ function processWebsite(url, content) {
 }
 
 const app = express();
+
 app.use(cors({ origin: "*" }));
+
+app.get("/crawl/:url", async (req, res) => {
+	const response = await fetch(req.params.url);
+	const data = await response.text();
+
+	res.status(200).json({ success: true, url: req.params.url, data });
+});
+
 app.post("/crawl", async (req, res) => {
 	const url = req.body.url;
 	const response = await fetch(url);
