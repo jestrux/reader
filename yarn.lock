@@ -241,6 +241,11 @@
     mime-types "~2.1.35"
     ora "^5.4.1"
 
+"@capacitor/android@^5.7.0":
+  version "5.7.0"
+  resolved "https://registry.yarnpkg.com/@capacitor/android/-/android-5.7.0.tgz#d67e0432c60e115672007e18a8492b0e7d2aa9ea"
+  integrity sha512-0bnG1dqfT/nTjzMeHF/a5kF8mqGjHrPLADNqn41seWDfb2ch6AMiKUHsmHpEOWmGIrWOM25qNTrTOytoCSpuXg==
+
 "@capacitor/assets@^3.0.4":
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/@capacitor/assets/-/assets-3.0.4.tgz#f328386cfcc7a9c3850b132ee06c74cbfcd35be8"

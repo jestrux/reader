@@ -9,6 +9,7 @@
 		"lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
 		"preview": "vite preview",
 		"assets": "npx @capacitor/assets generate",
+		"android": "vite build && npx cap run android",
 		"ios": "vite build && npx cap run ios",
 		"predesktop": "vite build && cp -R ./docs/. ./electron/build",
 		"desktop": "electron electron/index.js",
@@ -17,6 +18,7 @@
 	},
 	"dependencies": {
 		"@capacitor-community/electron": "^5.0.1",
+		"@capacitor/android": "^5.7.0",
 		"@capacitor/cli": "^5.6.0",
 		"@capacitor/clipboard": "^5.0.6",
 		"@capacitor/core": "^5.6.0",

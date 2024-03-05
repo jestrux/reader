@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Reader</string>
+    <string name="title_activity_main">Reader</string>
+    <string name="package_name">tz.co.reader</string>
+    <string name="custom_url_scheme">tz.co.reader</string>
+</resources>
