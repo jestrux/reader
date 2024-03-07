@@ -18,6 +18,7 @@ import { Clipboard } from "@capacitor/clipboard";
 import { SendIntent } from "send-intent";
 import { Toast } from "@capacitor/toast";
 import { Preferences } from "@capacitor/preferences";
+import { App as CapacitorApp } from "@capacitor/app";
 
 // const fromColor = "#8BC34A";
 // const fromColor = "#2196F3";
@@ -169,6 +170,43 @@ function App() {
 		},
 	});
 
+	const listenForOpen = () => {
+		CapacitorApp.addListener("appUrlOpen", (event) => {
+			// showToast(JSON.stringify(new URL(event.url)));
+			try {
+				const slug = event.url.split("reader://app").pop();
+				const url = new URL(event.url);
+
+				if (slug && url.pathname?.length) {
+					const params = url.searchParams;
+					const id = params.get("id") || params.get("_id");
+					const [start] = params.get("crop").split(",");
+
+					Clipboard.write({
+						// string: `https://www.youtube.com/watch?v=${id}&t=${start}s`,
+						string: event.url,
+					});
+
+					window.open(
+						`https://www.youtube.com/watch?v=${id}&t=${start}s`,
+						"_blank"
+					);
+
+					// alert(
+					// 	`App: ${url.pathname}: Params: ` +
+					// 		JSON.stringify(
+					// 			Object.fromEntries(url.searchParams.entries())
+					// 		)
+					// );
+				} else {
+					alert("App: " + event.url);
+				}
+			} catch (error) {
+				alert("Error: " + error);
+			}
+		});
+	};
+
 	const listenForShare = async () => {
 		try {
 			const result = await SendIntent.checkSendIntentReceived();
@@ -179,7 +217,7 @@ function App() {
 				});
 			}
 		} catch (error) {
-			alert("Share process failed: ", error);
+			// alert("Share process failed: ", error);
 		}
 	};
 
@@ -198,6 +236,8 @@ function App() {
 
 		listenForShare();
 
+		listenForOpen();
+
 		window.addEventListener("sendIntentReceived", listenForShare, false);
 
 		const cancelSnapshotListener = onSnapshot(
@@ -212,6 +252,7 @@ function App() {
 				listenForShare,
 				false
 			);
+			CapacitorApp.removeAllListeners();
 			cancelSnapshotListener();
 		};
 	}, []);

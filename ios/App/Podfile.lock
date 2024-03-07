@@ -1,6 +1,8 @@
 PODS:
   - Capacitor (5.6.0):
     - CapacitorCordova
+  - CapacitorApp (5.0.7):
+    - Capacitor
   - CapacitorClipboard (5.0.7):
     - Capacitor
   - CapacitorCordova (5.6.0)
@@ -13,6 +15,7 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorClipboard (from `../../node_modules/@capacitor/clipboard`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
@@ -22,6 +25,8 @@ DEPENDENCIES:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/@capacitor/app"
   CapacitorClipboard:
     :path: "../../node_modules/@capacitor/clipboard"
   CapacitorCordova:
@@ -35,12 +40,13 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Capacitor: ebfc16cdb8116d04c101686b080342872da42d43
+  CapacitorApp: 17fecd0e6cb23feafac7eb0939417389038b0979
   CapacitorClipboard: 45e5e25f2271f98712985d422776cdc5a779cca1
   CapacitorCordova: 931b48fcdbc9bc985fc2f16cec9f77c794a27729
   CapacitorPreferences: 77ac427e98db83bace772455f8ba447430382c4c
   CapacitorToast: c8bb89eeb59a23c1fc298f138cc06c8ff4d90ac1
   SendIntent: 0a17b6984c4f27e9dfa56513267ba2c044a5a6c8
 
-PODFILE CHECKSUM: 6b58cd157b06d062488aedd558e8a926ddc2e1de
+PODFILE CHECKSUM: f945afa7807c42b2d282939d51843f0916c362cb
 
 COCOAPODS: 1.12.0
