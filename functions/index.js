@@ -88,8 +88,9 @@ app.use(cors({ origin: "*" }));
 app.get("/crawl/:url", async (req, res) => {
 	const response = await fetch(req.params.url);
 	const data = await response.text();
+	const meta = processWebsite(req.params.url, data);
 
-	res.status(200).json({ success: true, url: req.params.url, data });
+	res.status(200).json({ success: true, url: req.params.url, data, meta });
 });
 
 app.post("/crawl", async (req, res) => {
