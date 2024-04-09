@@ -118,4 +118,19 @@ app.post("/crawl", async (req, res) => {
 	}
 });
 
+app.post("/mailer", async (req, res) => {
+	try {
+		const payload = {
+			to: req.body.to,
+			message: req.body.message,
+		};
+
+		await admin.db.collection("__email").doc().create(payload);
+
+		res.status(200).json({ ...payload, success: true });
+	} catch (error) {
+		res.status(500).json({ success: false, error });
+	}
+});
+
 export const api = functions.https.onRequest(app);
