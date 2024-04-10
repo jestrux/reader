@@ -4,86 +4,93 @@ import * as admin from "./admin.js";
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
-// import { parse } from "node-html-parser";
+import { parse } from "node-html-parser";
 
 async function processWebsite(url, content) {
-	return fetch(`https://api.linkpreview.net/?q=${url}`, {
-		headers: {
-			"X-Linkpreview-Api-Key": "b7fc8791125983bdf0b831273964f8b1",
-		},
-	}).then((res) => res.json());
-	// const div = parse(content);
+	const div = parse(content);
 
-	// const ogImage = div
-	// 	.querySelector(`[property="og:image"]`)
-	// 	?.getAttribute("content");
+	const ogImage = div
+		.querySelector(`[property="og:image"]`)
+		?.getAttribute("content");
 
-	// let shortCutIcon = div
-	// 	.querySelector(`[rel="shortcut icon"]`)
-	// 	?.getAttribute("href");
+	let shortCutIcon = div
+		.querySelector(`[rel="shortcut icon"]`)
+		?.getAttribute("href");
 
-	// if (shortCutIcon && shortCutIcon.toString().charAt(0) == "/") {
-	// 	let baseUrl = new URL(url).href;
-	// 	if (baseUrl.endsWith("/")) {
-	// 		baseUrl = baseUrl.substring(0, baseUrl.length - 1);
-	// 	}
-	// 	shortCutIcon = baseUrl + "/" + shortCutIcon.substring(1);
-	// }
+	if (shortCutIcon && shortCutIcon.toString().charAt(0) == "/") {
+		let baseUrl = new URL(url).href;
+		if (baseUrl.endsWith("/")) {
+			baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+		}
+		shortCutIcon = baseUrl + "/" + shortCutIcon.substring(1);
+	}
 
-	// const appleTouchIcon = div
-	// 	.querySelector(`[rel="apple-touch-icon"]`)
-	// 	?.getAttribute("href");
+	const appleTouchIcon = div
+		.querySelector(`[rel="apple-touch-icon"]`)
+		?.getAttribute("href");
 
-	// const twitterImage = div
-	// 	.querySelector(`[name="twitter:image"]`)
-	// 	?.getAttribute("content");
+	const twitterImage = div
+		.querySelector(`[name="twitter:image"]`)
+		?.getAttribute("content");
 
-	// const title = div.querySelector(`title`)?.textContent;
-	// const ogTitle = div
-	// 	.querySelector(`[property="og:title"]`)
-	// 	?.getAttribute("content");
-	// const twitterTitle = div
-	// 	.querySelector(`[name="twitter:title"]`)
-	// 	?.getAttribute("content");
+	const title = div.querySelector(`title`)?.textContent;
+	const ogTitle = div
+		.querySelector(`[property="og:title"]`)
+		?.getAttribute("content");
+	const twitterTitle = div
+		.querySelector(`[name="twitter:title"]`)
+		?.getAttribute("content");
 
-	// const description = div
-	// 	.querySelector(`[property="description"]`)
-	// 	?.getAttribute("content");
+	const description = div
+		.querySelector(`[property="description"]`)
+		?.getAttribute("content");
 
-	// const ogDescription = div
-	// 	.querySelector(`[property="og:description"]`)
-	// 	?.getAttribute("content");
+	const ogDescription = div
+		.querySelector(`[property="og:description"]`)
+		?.getAttribute("content");
 
-	// const twitterDescription = div
-	// 	.querySelector(`[name="twitter:description"]`)
-	// 	?.getAttribute("content");
+	const twitterDescription = div
+		.querySelector(`[name="twitter:description"]`)
+		?.getAttribute("content");
 
-	// return {
-	// 	url,
-	// 	image:
-	// 		[
-	// 			...new Set(
-	// 				[
-	// 					twitterImage,
-	// 					ogImage,
-	// 					appleTouchIcon,
-	// 					shortCutIcon,
-	// 				].filter((v) => v)
-	// 			),
-	// 		]?.[0] ?? null,
-	// 	title:
-	// 		[
-	// 			...new Set([twitterTitle, ogTitle, title].filter((v) => v)),
-	// 		]?.[0] ?? null,
-	// 	description:
-	// 		[
-	// 			...new Set(
-	// 				[twitterDescription, ogDescription, description].filter(
-	// 					(v) => v
-	// 				)
-	// 			),
-	// 		]?.[0] ?? null,
-	// };
+	let res = {
+		url,
+		image:
+			[
+				...new Set(
+					[
+						twitterImage,
+						ogImage,
+						appleTouchIcon,
+						shortCutIcon,
+					].filter((v) => v)
+				),
+			]?.[0] ?? null,
+		title:
+			[
+				...new Set([twitterTitle, ogTitle, title].filter((v) => v)),
+			]?.[0] ?? null,
+		description:
+			[
+				...new Set(
+					[twitterDescription, ogDescription, description].filter(
+						(v) => v
+					)
+				),
+			]?.[0] ?? null,
+	};
+
+	if (!res.image || !res.description || !res.title) {
+		const response = await fetch(`https://api.linkpreview.net/?q=${url}`, {
+			headers: {
+				"X-Linkpreview-Api-Key": "b7fc8791125983bdf0b831273964f8b1",
+			},
+		}).then((res) => res.json());
+
+		if (!response.error) res = response;
+	}
+
+	return res;
 }
 
 const app = express();
